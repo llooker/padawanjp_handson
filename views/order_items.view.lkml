@@ -10,6 +10,7 @@ view: order_items {
 
   dimension: id {
     primary_key: yes
+    hidden: yes
     type: number
     sql: ${TABLE}.id ;;
   }
@@ -18,6 +19,7 @@ view: order_items {
   # Looker converts dates and timestamps to the specified timeframes within the dimension group.
 
   dimension_group: created {
+    label: "受注日時"
     type: time
     timeframes: [
       raw,
@@ -31,7 +33,14 @@ view: order_items {
     sql: ${TABLE}.created_at ;;
   }
 
+  dimension: date {
+    type: date
+    sql: ${created_raw} ;;
+    datatype: datetime
+  }
+
   dimension_group: delivered {
+    label: "到着日時"
     type: time
     timeframes: [
       raw,
@@ -52,16 +61,18 @@ view: order_items {
 
   dimension: inventory_item_id {
     type: number
+    hidden: yes
     sql: ${TABLE}.inventory_item_id ;;
   }
 
   dimension: order_id {
     type: number
-    # hidden: yes
+    hidden: yes
     sql: ${TABLE}.order_id ;;
   }
 
   dimension_group: returned {
+    label: "返品日時"
     type: time
     timeframes: [
       raw,
@@ -76,8 +87,10 @@ view: order_items {
   }
 
   dimension: sale_price {
+    label: "売上額"
     type: number
     sql: ${TABLE}.sale_price ;;
+    value_format_name: usd
   }
 
   # A measure is a field that uses a SQL aggregate function. Here are defined sum and average
@@ -85,16 +98,23 @@ view: order_items {
   # Click on the type parameter to see all the options in the Quick Help panel on the right.
 
   measure: total_sale_price {
+    label: "総売上額"
     type: sum
     sql: ${sale_price} ;;
+    value_format_name: usd
+
+    filters: [status: "Cancelled, Returned"]
   }
 
   measure: average_sale_price {
+    label: "平均売上額"
     type: average
     sql: ${sale_price} ;;
+    value_format_name: usd
   }
 
   dimension_group: shipped {
+    label: "出荷日時"
     type: time
     timeframes: [
       raw,
@@ -114,13 +134,99 @@ view: order_items {
     sql: ${TABLE}.status ;;
   }
 
+  dimension: status_jp {
+    label: "ステータス"
+    type: string
+    sql:
+      CASE
+        WHEN ${status} = 'Processing' THEN 'プロセス中'
+        WHEN ${status} = 'Shipped' THEN '出荷'
+        WHEN ${status} = 'Complete' THEN '完了'
+        WHEN ${status} = 'Returned' THEN '返品'
+        WHEN ${status} = 'Cancelled' THEN 'キャンセル'
+        ELSE null
+      END ;;
+
+  }
+
   dimension: user_id {
     type: number
+    hidden: yes
     sql: ${TABLE}.user_id ;;
   }
 
-  measure: count {
+  dimension: is_returned {
+    label: "返品フラグ"
+    type: yesno
+    sql: ${status} = "Returned" ;;
+  }
+
+  measure: num_of_return {
+    label: "返品数"
     type: count
-    drill_fields: [id, orders.order_id]
+    filters: [is_returned: "yes"]
+  }
+
+  measure: count {
+    label: "オーダー数"
+    type: count
+    drill_fields: [detail*]
+  }
+
+  # ----- Sets of fields for drilling ------
+  set: detail {
+    fields: [
+      id,
+      users.last_name,
+      users.id,
+      users.first_name,
+      inventory_items.id,
+      inventory_items.product_name,
+      orders.order_id
+    ]
+  }
+
+  # ----- Sets advanced information ------
+  parameter: date_selector {
+    label: "日付粒度選択"
+    type: unquoted
+    allowed_value: {
+      label: "年"
+      value: "year"
+    }
+
+    allowed_value: {
+      label: "月"
+      value: "month"
+    }
+
+    allowed_value: {
+      label: "週"
+      value: "week"
+    }
+
+    allowed_value: {
+      label: "日"
+      value: "day"
+    }
+
+    default_value: "day"
+  }
+
+  dimension: param_date {
+    label: "選択日付"
+    type: date
+    sql:
+          {% if date_selector._parameter_value == 'day' %} ${created_date}
+
+      {% elsif date_selector._parameter_value == 'week' %} ${created_week}
+
+      {% elsif date_selector._parameter_value == 'month' %} ${created_month}
+
+      {% elsif date_selector._parameter_value == 'year' %} ${created_year}
+
+      {% else %} null {% endif %}
+
+    ;;
   }
 }
