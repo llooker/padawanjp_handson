@@ -19,4 +19,10 @@ include: "/views/*.view.lkml"                # include all views in the views/ f
 #   }
 # }
 
-explore: order_items {}
+explore: order_items {
+  join: users {
+    sql_on: ${order_items.user_id} = ${users.id} ;;
+    type: left_outer
+    relationship: many_to_one
+  }
+}
