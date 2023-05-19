@@ -25,7 +25,7 @@ explore: hands_on_sample {
   label: "受注データ分析"
 
   view_name: order_items
-  view_label: "オーダー"
+  view_label: "オーダーアイテム"
 
   always_filter: {
     filters: [order_items.created_date: "last 7 days"]
@@ -39,7 +39,7 @@ explore: hands_on_sample {
   join: orders {
     view_label: "オーダー"
     relationship: many_to_one
-    sql_on: ${orders.order_id} = ${orders.order_id} ;;
+    sql_on: ${order_items.order_id} = ${orders.order_id} ;;
   }
 
   join: inventory_items {
