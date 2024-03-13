@@ -103,7 +103,7 @@ view: order_items {
     sql: ${sale_price} ;;
     value_format_name: usd
 
-    filters: [status: "Cancelled, Returned"]
+    filters: [status: "-Cancelled, -Returned"]
   }
 
   measure: average_sale_price {
